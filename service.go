@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -33,7 +34,11 @@ func createNote(path string) error {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
 	notePath := filepath.Join(notesDir, "notes", path+".md")
-	fmt.Println(notePath)
+
+	// Sync if wanted
+	if err := syncIfWanted(cfg); err != nil {
+		log.Printf("failed to sync, proceeding anyways, if you want to terminate the program upon sync error you can change this in the config: %v", err)
+	}
 
 	// Check that note doesn't already exist
 	if stat, err := os.Stat(notePath); err != nil && !errors.Is(err, os.ErrNotExist) {
