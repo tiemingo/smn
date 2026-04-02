@@ -27,6 +27,9 @@ func PipeInput(input string, command string, args ...string) (string, error, str
 }
 
 func ReplaceWithHomeDir(path string) (string, error) {
+	if !strings.Contains(path, "~") {
+		return path, nil
+	}
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return path, fmt.Errorf("failed to replace ~ with home directory: %v", err)

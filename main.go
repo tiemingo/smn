@@ -11,7 +11,7 @@ import (
 
 func main() {
 
-	parser, addCmd, addPath, editCmd, editPath, buildCmd, buildPath, latestCmd, latestAmount, syncCmd, configCmd := SetupParser()
+	parser, createCmd, createPath, editCmd, editPath, buildCmd, buildPath, latestCmd, latestAmount, syncCmd, configCmd := SetupParser()
 
 	// Parse the arguments
 	err := parser.Parse(os.Args)
@@ -21,8 +21,8 @@ func main() {
 	}
 
 	// Route the commands
-	if addCmd.Happened() {
-		err = addNote(*addPath)
+	if createCmd.Happened() {
+		err = createNote(*createPath)
 	} else if editCmd.Happened() {
 		err = editNote(*editPath)
 	} else if buildCmd.Happened() {
@@ -45,16 +45,16 @@ func SetupParser() (*argparse.Parser, *argparse.Command, *string, *argparse.Comm
 	parser := argparse.NewParser("smn", "A simple markdown note manager")
 
 	// Setup Add
-	addCmd := parser.NewCommand("add", "Create a new note")
-	addNote := addCmd.StringPositional(&argparse.Options{Required: true, Help: "<subfolder/my_note_title>"})
+	createCmd := parser.NewCommand("create", "Create a new note")
+	addPath := createCmd.StringPositional(&argparse.Options{Required: true, Help: "<subfolder/my_note_title>"})
 
 	// Setup Edit
 	editCmd := parser.NewCommand("edit", "Edit an existing note")
-	editNote := editCmd.StringPositional(&argparse.Options{Required: true, Help: "<subfolder/my_note_title>"})
+	editPath := editCmd.StringPositional(&argparse.Options{Required: true, Help: "<subfolder/my_note_title>"})
 
 	// Setup build
 	buildCmd := parser.NewCommand("build", "Export a note")
-	buildNote := buildCmd.StringPositional(&argparse.Options{Required: true, Help: "<subfolder/my_note_title>"})
+	buildPath := buildCmd.StringPositional(&argparse.Options{Required: true, Help: "<subfolder/my_note_title>"})
 
 	// Setup latest
 	latestCmd := parser.NewCommand("latest", "Get most recent created or edited notes, use 0 to get all notes")
@@ -66,5 +66,5 @@ func SetupParser() (*argparse.Parser, *argparse.Command, *string, *argparse.Comm
 	// Setup Config
 	configCmd := parser.NewCommand("config", "Configure the app")
 
-	return parser, addCmd, addNote, editCmd, editNote, buildCmd, buildNote, latestCmd, latestAmount, syncCmd, configCmd
+	return parser, createCmd, addPath, editCmd, editPath, buildCmd, buildPath, latestCmd, latestAmount, syncCmd, configCmd
 }

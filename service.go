@@ -1,14 +1,72 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/tiemingo/smn/config"
 	"github.com/tiemingo/smn/util"
 )
 
-func addNote(path string) error {
+const header = `---
+title: "%v"
+subject: "%v"
+author: "%v"
+date: "\\today"
+---
+
+%v`
+
+func createNote(path string) error {
+
+	if path == "" {
+		return fmt.Errorf("you have to provide a note title")
+	}
+
+	cfg := config.GetConfig()
+
+	// Get notes directory
+	notesDir, err := util.ReplaceWithHomeDir(cfg.NotesDir)
+	if err != nil {
+		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
+	}
+	notePath := filepath.Join(notesDir, "notes", path+".md")
+	fmt.Println(notePath)
+
+	// Check that note doesn't already exist
+	if stat, err := os.Stat(notePath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed stat note(%v): %v", notePath, err)
+	} else if err == nil && !stat.IsDir() {
+		return fmt.Errorf("file already exists at %v", notePath)
+	}
+
+	// Create path to file
+	if err := os.MkdirAll(filepath.Dir(notePath), 0755); err != nil {
+		return fmt.Errorf("failed to create subdirectories(%v): %v", filepath.Dir(notePath), err)
+	}
+
+	// Load template
+	template := ""
+	if cfg.Template != "" {
+		templatePath, err := util.ReplaceWithHomeDir(cfg.Template)
+		if err != nil {
+			return fmt.Errorf("failed convert template path(%v): %v", cfg.Template, err)
+		}
+		templateBytes, err := os.ReadFile(templatePath)
+		if err != nil {
+			return fmt.Errorf("failed to load template(%v): %v", cfg.Template, err)
+		}
+		template = string(templateBytes)
+	}
+
+	// Create note
+	content := fmt.Sprintf(header, filepath.Base(path), filepath.Base(filepath.Dir(notePath)), cfg.DefaultAuthors, template)
+	if err := os.WriteFile(notePath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to create note(%v): %v", notePath, err)
+	}
+
 	return nil
 }
 
