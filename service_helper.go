@@ -42,7 +42,7 @@ func openNoteAndSync(cfg config.Config, path string, create bool) error {
 		editor = "vim"
 	}
 
-	cmd := exec.Command(editor, editor, path)
+	cmd := exec.Command(editor, path)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
