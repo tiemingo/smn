@@ -72,6 +72,9 @@ func createNote(path string) error {
 		return fmt.Errorf("failed to create note(%v): %v", notePath, err)
 	}
 
+	// Open note and sync after
+	openNoteAndSync(cfg, notePath, true)
+
 	return nil
 }
 
@@ -126,9 +129,15 @@ func syncNotes(optionalCommitMessage ...string) error {
 		return fmt.Errorf("failed to run git pull --rebase: %v, stderr: %v", pullErr, pullStderr)
 	}
 
-	// Push if changes exist
-	if _, pushErr, pushStderr := util.PipeInput("", "git", "push"); pushErr != nil {
-		return fmt.Errorf("failed to run git push: %v, stderr: %v", pushErr, pushStderr)
+	// Check if something can be pushed to save time
+	if cherryOutput, cherryErr, cherryStderr := util.PipeInput("", "git", "cherry", "-v"); cherryErr != nil {
+		return fmt.Errorf("failed to run git cherry -v: %v, stderr: %v", cherryErr, cherryStderr)
+	} else if cherryOutput != "" {
+
+		// Push changes
+		if _, pushErr, pushStderr := util.PipeInput("", "git", "push"); pushErr != nil {
+			return fmt.Errorf("failed to run git push: %v, stderr: %v", pushErr, pushStderr)
+		}
 	}
 
 	return nil
