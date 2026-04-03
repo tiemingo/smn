@@ -11,7 +11,7 @@ Simple markdown notes is a as the name suggests simple markdown notes manager wr
 The program can be installed via go install. 
 
 ```bash
-go install https://github.com/tiemingo/smn@latest
+go install github.com/tiemingo/smn@latest
 ```
 If you have not installed a golang program before, you need to add the Go bin directory to your systems path.<br>
 This usually is your `.bashrc`.
