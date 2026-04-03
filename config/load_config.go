@@ -8,17 +8,16 @@ import (
 )
 
 var defaultConfig = Config{
-	NotesDir:   "~/Documents/notes",
-	BuildFiles: "~/Documents/notes/build",
-	Template:   "", // No template
-	OutputDir:  "~/Downloads",
+	NotesDir:  "~/Documents/notes",
+	Template:  "", // No template
+	OutputDir: "~/Downloads",
 
 	AutoSync:        true,
 	FailOnSyncError: false,
 
-	DefaultAuthors: "[Tiemingo]",
+	DefaultAuthors: []string{"Tiemingo"},
 
-	BuildCommand:     "pandoc %v build/style.yaml -d build/proposals.yaml -o %v.pdf",
+	BuildCommand:     []string{"pandoc", "{note_path}", "~/Documents/notes/build/style.yaml", "-d", "~/Documents/notes/build/proposals.yaml", "-o", "{output_path}.pdf"},
 	BuildFileName:    "{authors}_{title}",
 	BuildAuthorSplit: "_and_",
 	BuildAuthor:      "{last_name}_{fist_name}",

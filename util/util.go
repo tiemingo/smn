@@ -8,12 +8,15 @@ import (
 	"strings"
 )
 
-// Returns the output, error and stderr
-func PipeInput(input string, command string, args ...string) (string, error, string) {
-	inputData := []byte(input)
+type Author struct {
+	FirstName string
+	LastName  string
+	GivenName string
+}
 
+// Returns the output, error and stderr
+func RunCommand(command string, args ...string) (string, error, string) {
 	cmd := exec.Command(command, args...)
-	cmd.Stdin = bytes.NewReader(inputData)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -35,4 +38,30 @@ func ReplaceWithHomeDir(path string) (string, error) {
 		return path, fmt.Errorf("failed to replace ~ with home directory: %v", err)
 	}
 	return strings.ReplaceAll(path, "~", homeDir), nil
+}
+
+func ParseAuthor(fullName string) Author {
+
+	parts := strings.Fields(fullName)
+
+	if len(parts) == 0 {
+		return Author{}
+	}
+
+	firstName := parts[0]
+	lastName := ""
+	givenNames := ""
+
+	if len(parts) > 1 {
+		lastName = parts[len(parts)-1]
+		givenNames = strings.Join(parts[:len(parts)-1], " ")
+	} else {
+		givenNames = firstName
+	}
+
+	return Author{
+		FirstName: firstName,
+		LastName:  lastName,
+		GivenName: givenNames,
+	}
 }

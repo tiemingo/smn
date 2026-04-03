@@ -6,9 +6,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/tiemingo/smn/config"
 	"github.com/tiemingo/smn/util"
+	"gopkg.in/yaml.v3"
 )
 
 // syncIfWanted syncs the notes if the config option is set to auto sync.
@@ -73,4 +75,47 @@ func ActualNotesDir(cfg config.Config) (string, error) {
 		return "", err
 	}
 	return filepath.Join(basePath, "notes"), nil
+}
+
+func buildFileName(cfg config.Config, notePath string) (string, error) {
+
+	header, err := getHeader(notePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to get header: %v", err)
+	}
+
+	// Parse authors
+	authors := []string{}
+	for _, author := range header.Authors {
+		replacedAuthor := util.ParseAuthor(author)
+		authorReplacer := strings.NewReplacer("{last_name}", replacedAuthor.LastName, "{first_name}", replacedAuthor.FirstName, "{given_name}", replacedAuthor.GivenName)
+		authors = append(authors, authorReplacer.Replace(author))
+	}
+	authorsString := strings.Join(authors, cfg.BuildAuthorSplit)
+
+	titleReplacer := strings.NewReplacer("{authors}", authorsString, "{title}", header.Title, "{subject}", header.Subject)
+	return titleReplacer.Replace(cfg.BuildFileName), nil
+}
+
+func getHeader(path string) (Header, error) {
+
+	// Load note and extract header
+	noteBytes, err := os.ReadFile(path)
+	if err != nil {
+		return Header{}, fmt.Errorf("failed to load note: %v", err)
+	}
+	parts := strings.SplitN(string(noteBytes), "---", 3)
+	if len(parts) < 3 {
+		return Header{}, fmt.Errorf("failed to find header: %v", err)
+	}
+	yamlBlock := parts[1]
+
+	// Unmarshal
+	var header Header
+	err = yaml.Unmarshal([]byte(yamlBlock), &header)
+	if err != nil {
+		return Header{}, fmt.Errorf("failed to unmarshal header: %v", err)
+	}
+
+	return header, nil
 }

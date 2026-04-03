@@ -11,7 +11,7 @@ import (
 
 func main() {
 
-	parser, createCmd, createPath, editCmd, editPath, buildCmd, buildPath, latestCmd, latestAmount, syncCmd, configCmd := SetupParser()
+	parser, createCmd, createPath, editCmd, editPath, removeCmd, removePath, buildCmd, buildPath, latestCmd, latestAmount, syncCmd, configCmd := SetupParser()
 
 	// Parse the arguments
 	err := parser.Parse(os.Args)
@@ -25,6 +25,8 @@ func main() {
 		err = createNote(*createPath)
 	} else if editCmd.Happened() {
 		err = editNote(*editPath)
+	} else if removeCmd.Happened() {
+		err = removeNote(*removePath)
 	} else if buildCmd.Happened() {
 		err = buildNote(*buildPath)
 	} else if latestCmd.Happened() {
@@ -41,7 +43,7 @@ func main() {
 
 }
 
-func SetupParser() (*argparse.Parser, *argparse.Command, *string, *argparse.Command, *string, *argparse.Command, *string, *argparse.Command, *int, *argparse.Command, *argparse.Command) {
+func SetupParser() (*argparse.Parser, *argparse.Command, *string, *argparse.Command, *string, *argparse.Command, *string, *argparse.Command, *string, *argparse.Command, *int, *argparse.Command, *argparse.Command) {
 	parser := argparse.NewParser("smn", "A simple markdown note manager")
 
 	// Setup Add
@@ -51,6 +53,10 @@ func SetupParser() (*argparse.Parser, *argparse.Command, *string, *argparse.Comm
 	// Setup Edit
 	editCmd := parser.NewCommand("edit", "Edit an existing note")
 	editPath := editCmd.StringPositional(&argparse.Options{Required: true, Help: "<subfolder/my_note_title>"})
+
+	// Setup Remove
+	removeCmd := parser.NewCommand("remove", "Remove a note")
+	removePath := removeCmd.StringPositional(&argparse.Options{Required: true, Help: "<subfolder/my_note_title>"})
 
 	// Setup build
 	buildCmd := parser.NewCommand("build", "Export a note")
@@ -66,5 +72,5 @@ func SetupParser() (*argparse.Parser, *argparse.Command, *string, *argparse.Comm
 	// Setup Config
 	configCmd := parser.NewCommand("config", "Configure the app")
 
-	return parser, createCmd, addPath, editCmd, editPath, buildCmd, buildPath, latestCmd, latestAmount, syncCmd, configCmd
+	return parser, createCmd, addPath, editCmd, editPath, removeCmd, removePath, buildCmd, buildPath, latestCmd, latestAmount, syncCmd, configCmd
 }
