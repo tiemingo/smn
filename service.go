@@ -211,7 +211,9 @@ func latestNotes(amount int) error {
 	if amount > 0 && amount < len(notes) {
 		notes = notes[:amount]
 	}
-	fmt.Println(strings.Join(notes, "\n"))
+	if len(notes) > 0 {
+		fmt.Println(strings.Join(notes, "\n"))
+	}
 	return nil
 }
 
