@@ -81,7 +81,11 @@ func createNote(path string) error {
 		defaultAuthors = append(defaultAuthors, fmt.Sprintf("\"%v\"", author))
 	}
 	authors := strings.Join(defaultAuthors, ", ")
-	content := fmt.Sprintf(header, filepath.Base(path), filepath.Base(filepath.Dir(notePath)), authors, template)
+	subject := filepath.Base(filepath.Dir(path))
+	if subject == "." {
+		subject = ""
+	}
+	content := fmt.Sprintf(header, filepath.Base(path), subject, authors, template)
 	if err := os.WriteFile(notePath, []byte(content), 0644); err != nil {
 		return fmt.Errorf("failed to create note(%v): %v", notePath, err)
 	}
