@@ -93,7 +93,7 @@ func buildFileName(cfg config.Config, notePath string) (string, error) {
 	for _, author := range header.Authors {
 		replacedAuthor := util.ParseAuthor(author)
 		authorReplacer := strings.NewReplacer("{last_name}", replacedAuthor.LastName, "{first_name}", replacedAuthor.FirstName, "{given_name}", replacedAuthor.GivenName)
-		authors = append(authors, authorReplacer.Replace(author))
+		authors = append(authors, authorReplacer.Replace(cfg.BuildAuthor))
 	}
 	authorsString := strings.Join(authors, cfg.BuildAuthorSplit)
 
