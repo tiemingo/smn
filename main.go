@@ -43,6 +43,7 @@ func main() {
 
 }
 
+// SetupParser creates all commands available and returns them with their respective arguments
 func SetupParser() (*argparse.Parser, *argparse.Command, *string, *argparse.Command, *string, *argparse.Command, *string, *argparse.Command, *string, *argparse.Command, *int, *argparse.Command, *argparse.Command) {
 	parser := argparse.NewParser("smn", "A simple markdown note manager")
 
