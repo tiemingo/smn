@@ -75,7 +75,7 @@ This is the configuration I currently use myself. The config can be set at `<use
 	"default_authors": ["Tiemingo"],
 	"build_command": ["pandoc",  "{note_path}", "~/Documents/notes/build/style.yaml", "-d", "~/Documents/notes/build/proposals.yaml", "-o", "{output_path}.pdf"],
 	"build_file_name": "{authors}_{title}",
-	"build_author": "{last_name}_{fist_name}",
+	"build_author": "{last_name}_{first_name}",
 	"build_author_split": "_and_"
 }
 ```
