@@ -109,10 +109,36 @@ func editNote(path string) error {
 	}
 
 	return openNoteAndSync(cfg, notePath, false)
-
 }
 
 func removeNote(path string) error {
+	if path == "" {
+		return fmt.Errorf("you have to provide a note title")
+	}
+
+	cfg := config.GetConfig()
+
+	// Get notes directory
+	notesDir, err := ActualNotesDir(cfg)
+	if err != nil {
+		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
+	}
+	notePath := filepath.Join(notesDir, path+".md")
+
+	// Sync if wanted
+	if err := syncIfWanted(cfg); err != nil {
+		log.Printf("failed to sync, proceeding anyways, if you want to terminate the program upon sync error you can change this in the config: %v", err)
+	}
+
+	// Remove note
+	if err := os.Remove(notePath); err != nil {
+		return fmt.Errorf("failed to delete note: %v", err)
+	}
+
+	// Sync if wanted
+	if err := syncIfWanted(cfg, fmt.Sprintf("delete note %v", path)); err != nil {
+		log.Printf("failed to sync, proceeding anyways, if you want to terminate the program upon sync error you can change this in the config: %v", err)
+	}
 	return nil
 }
 
@@ -159,6 +185,28 @@ func buildNote(path string) error {
 }
 
 func latestNotes(amount int) error {
+	cfg := config.GetConfig()
+
+	// Get notes directory
+	notesDir, err := ActualNotesDir(cfg)
+	if err != nil {
+		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
+	}
+
+	// Sync if wanted
+	if err := syncIfWanted(cfg); err != nil {
+		log.Printf("failed to sync, proceeding anyways, if you want to terminate the program upon sync error you can change this in the config: %v", err)
+	}
+
+	notes, err := util.GetSortedMarkdownFiles(notesDir)
+	if err != nil {
+		return fmt.Errorf("failed to get notes: %v", err)
+	}
+
+	if amount > 0 && amount < len(notes) {
+		notes = notes[:amount]
+	}
+	fmt.Println(strings.Join(notes, "\n"))
 	return nil
 }
 
