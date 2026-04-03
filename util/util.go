@@ -97,6 +97,7 @@ func GetSortedMarkdownFiles(root string) ([]string, error) {
 			if err != nil {
 				return fmt.Errorf("failed to convert to relative path: %v", err)
 			}
+			notePath = strings.TrimRight(notePath, ".md")
 			files = append(files, FileInfo{
 				Path:    notePath,
 				ModTime: info.ModTime().Unix(),
