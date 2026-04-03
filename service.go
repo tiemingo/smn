@@ -19,6 +19,7 @@ type Header struct {
 	Subject string   `yaml:"subtitle"`
 }
 
+// Header used for new notes
 const header = `---
 title: "%v"
 subtitle: "%v"
@@ -37,7 +38,7 @@ func createNote(path string) error {
 	cfg := config.GetConfig()
 
 	// Get notes directory
-	notesDir, err := ActualNotesDir(cfg)
+	notesDir, err := actualNotesDir(cfg)
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
@@ -97,7 +98,7 @@ func editNote(path string) error {
 	cfg := config.GetConfig()
 
 	// Get notes directory
-	notesDir, err := ActualNotesDir(cfg)
+	notesDir, err := actualNotesDir(cfg)
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
@@ -119,7 +120,7 @@ func removeNote(path string) error {
 	cfg := config.GetConfig()
 
 	// Get notes directory
-	notesDir, err := ActualNotesDir(cfg)
+	notesDir, err := actualNotesDir(cfg)
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
@@ -150,7 +151,7 @@ func buildNote(path string) error {
 	cfg := config.GetConfig()
 
 	// Get notes directory
-	notesDir, err := ActualNotesDir(cfg)
+	notesDir, err := actualNotesDir(cfg)
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
@@ -188,7 +189,7 @@ func latestNotes(amount int) error {
 	cfg := config.GetConfig()
 
 	// Get notes directory
-	notesDir, err := ActualNotesDir(cfg)
+	notesDir, err := actualNotesDir(cfg)
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}

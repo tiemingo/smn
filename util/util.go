@@ -17,7 +17,7 @@ type Author struct {
 	GivenName string
 }
 
-// Returns the output, error and stderr
+// RunCommand runs the provided command with args and returns the output, error and stderr
 func RunCommand(command string, args ...string) (string, error, string) {
 	cmd := exec.Command(command, args...)
 
@@ -32,6 +32,7 @@ func RunCommand(command string, args ...string) (string, error, string) {
 	return stdout.String(), nil, ""
 }
 
+// ReplaceWithHomeDir takes the path and replaces any occurrences of ~ with the home directory
 func ReplaceWithHomeDir(path string) (string, error) {
 	if !strings.Contains(path, "~") {
 		return path, nil
@@ -43,6 +44,7 @@ func ReplaceWithHomeDir(path string) (string, error) {
 	return strings.ReplaceAll(path, "~", homeDir), nil
 }
 
+// ParseAuthor parses the full name to first, last and give name
 func ParseAuthor(fullName string) Author {
 
 	parts := strings.Fields(fullName)
@@ -69,6 +71,9 @@ func ParseAuthor(fullName string) Author {
 	}
 }
 
+// GetSortedMarkdownFiles returns all markdown files in the provided and it's sub directories.
+// The returned string is the relative path of the file starting at the root dir.
+// The files returned ordered by last modified, with the most recent first.
 func GetSortedMarkdownFiles(root string) ([]string, error) {
 
 	type FileInfo struct {

@@ -32,6 +32,8 @@ func syncIfWanted(cfg config.Config, optionalCommitMessage ...string) error {
 	return err
 }
 
+// openNoteAndSync opens the provided path with the default editor set in the env.
+// The create bool decides whether the sync commit message should be create or update.
 func openNoteAndSync(cfg config.Config, path string, create bool) error {
 
 	// Get editor
@@ -56,7 +58,7 @@ func openNoteAndSync(cfg config.Config, path string, create bool) error {
 	}
 
 	// Sync if wanted
-	basePath, err := ActualNotesDir(cfg)
+	basePath, err := actualNotesDir(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to get notes directory: %v", err)
 	}
@@ -69,7 +71,8 @@ func openNoteAndSync(cfg config.Config, path string, create bool) error {
 	return nil
 }
 
-func ActualNotesDir(cfg config.Config) (string, error) {
+// actualNotesDir returns the notes dir with /notes added
+func actualNotesDir(cfg config.Config) (string, error) {
 	basePath, err := util.ReplaceWithHomeDir(cfg.NotesDir)
 	if err != nil {
 		return "", err
@@ -77,6 +80,7 @@ func ActualNotesDir(cfg config.Config) (string, error) {
 	return filepath.Join(basePath, "notes"), nil
 }
 
+// buildFileName returns the filename that should be used for exported notes with all replacer being replaced with actual values
 func buildFileName(cfg config.Config, notePath string) (string, error) {
 
 	header, err := getHeader(notePath)
@@ -97,6 +101,7 @@ func buildFileName(cfg config.Config, notePath string) (string, error) {
 	return titleReplacer.Replace(cfg.BuildFileName), nil
 }
 
+// getHeader returns the information from the markdown files yaml header
 func getHeader(path string) (Header, error) {
 
 	// Load note and extract header
