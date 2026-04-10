@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -10,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/tiemingo/smn/config"
+	"github.com/tiemingo/smn/notes"
 	"github.com/tiemingo/smn/util"
 )
 
@@ -18,16 +18,6 @@ type Header struct {
 	Authors []string `yaml:"author"`
 	Subject string   `yaml:"subtitle"`
 }
-
-// Header used for new notes
-const header = `---
-title: "%v"
-subtitle: "%v"
-author: [%v]
-date: "\\today"
----
-
-%v`
 
 func createNote(path string) error {
 
@@ -38,60 +28,27 @@ func createNote(path string) error {
 	cfg := config.GetConfig()
 
 	// Get notes directory
-	notesDir, err := actualNotesDir(cfg)
+	notesDir, err := util.ReplaceWithHomeDir(cfg.NotesDir)
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
-	notePath := filepath.Join(notesDir, path+".md")
+
+	note, err := notes.NoteObject(notesDir, path, true)
+	if err != nil {
+		return fmt.Errorf("failed to create note object: %v", err)
+	}
 
 	// Sync if wanted
 	if err := syncIfWanted(cfg); err != nil {
 		log.Printf("failed to sync, proceeding anyways, if you want to terminate the program upon sync error you can change this in the config: %v", err)
 	}
 
-	// Check that note doesn't already exist
-	if stat, err := os.Stat(notePath); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("failed stat note(%v): %v", notePath, err)
-	} else if err == nil && !stat.IsDir() {
-		return fmt.Errorf("file already exists at %v", notePath)
-	}
-
-	// Create path to file
-	if err := os.MkdirAll(filepath.Dir(notePath), 0755); err != nil {
-		return fmt.Errorf("failed to create subdirectories(%v): %v", filepath.Dir(notePath), err)
-	}
-
-	// Load template
-	template := ""
-	if cfg.Template != "" {
-		templatePath, err := util.ReplaceWithHomeDir(cfg.Template)
-		if err != nil {
-			return fmt.Errorf("failed convert template path(%v): %v", cfg.Template, err)
-		}
-		templateBytes, err := os.ReadFile(templatePath)
-		if err != nil {
-			return fmt.Errorf("failed to load template(%v): %v", cfg.Template, err)
-		}
-		template = string(templateBytes)
-	}
-
-	// Create note
-	defaultAuthors := []string{}
-	for _, author := range cfg.DefaultAuthors {
-		defaultAuthors = append(defaultAuthors, fmt.Sprintf("\"%v\"", author))
-	}
-	authors := strings.Join(defaultAuthors, ", ")
-	subject := filepath.Base(filepath.Dir(path))
-	if subject == "." {
-		subject = ""
-	}
-	content := fmt.Sprintf(header, filepath.Base(path), subject, authors, template)
-	if err := os.WriteFile(notePath, []byte(content), 0644); err != nil {
-		return fmt.Errorf("failed to create note(%v): %v", notePath, err)
+	if err := note.CreateNote(); err != nil {
+		return fmt.Errorf("failed to create note: %v", err)
 	}
 
 	// Open note and sync after
-	return openNoteAndSync(cfg, notePath, true)
+	return openNoteAndSync(cfg, note.GetNotePath(), true)
 }
 
 func editNote(path string) error {
@@ -102,7 +59,7 @@ func editNote(path string) error {
 	cfg := config.GetConfig()
 
 	// Get notes directory
-	notesDir, err := actualNotesDir(cfg)
+	notesDir, err := util.ReplaceWithHomeDir(cfg.NotesDir)
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
@@ -124,7 +81,7 @@ func removeNote(path string) error {
 	cfg := config.GetConfig()
 
 	// Get notes directory
-	notesDir, err := actualNotesDir(cfg)
+	notesDir, err := util.ReplaceWithHomeDir(cfg.NotesDir)
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
@@ -155,7 +112,7 @@ func buildNote(path string) error {
 	cfg := config.GetConfig()
 
 	// Get notes directory
-	notesDir, err := actualNotesDir(cfg)
+	notesDir, err := util.ReplaceWithHomeDir(cfg.NotesDir)
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
@@ -172,8 +129,8 @@ func buildNote(path string) error {
 	}
 
 	// Run build command
-	replaceCommand := strings.NewReplacer("{note_path}", notePath, "{output_path}", filepath.Join(cfg.OutputDir, fileName))
-	buildCommand := cfg.BuildCommand
+	replaceCommand := strings.NewReplacer("{note_path}", notePath, "{output_path}", filepath.Join("out dir", fileName))
+	buildCommand := []string{} // load build command
 	for i, commandElement := range buildCommand {
 		replacedString, err := util.ReplaceWithHomeDir(replaceCommand.Replace(commandElement))
 		if err != nil {
@@ -183,7 +140,7 @@ func buildNote(path string) error {
 	}
 
 	if _, err, stderr := util.RunCommand(buildCommand[0], buildCommand[1:]...); err != nil {
-		return fmt.Errorf("failed to run %v: %v, stderr: %v", cfg.BuildCommand, err, stderr)
+		return fmt.Errorf("failed to run %v: %v, stderr: %v", buildCommand, err, stderr)
 	}
 
 	return nil
@@ -193,7 +150,7 @@ func latestNotes(amount int) error {
 	cfg := config.GetConfig()
 
 	// Get notes directory
-	notesDir, err := actualNotesDir(cfg)
+	notesDir, err := util.ReplaceWithHomeDir(cfg.NotesDir)
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}

@@ -54,12 +54,15 @@ func NoteObject(notesDir, relNote string, new bool) (*Note, error) {
 		relDir = note.getNoteRelDirParent()
 
 		// Go back until a folder exists
-		relDir = getExistingPathPart(relDir)
-		if relDir == "" {
+		relDir = getExistingPathPart(note.getNotesDir(), relDir)
+		if relDir == "" || relDir == "." {
 			return nil, fmt.Errorf("make sure the topic folder exists")
 		}
 	}
 	config, err := note_config.GetConfig(note.getNotesDir(), relDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get config for note: %v", err)
+	}
 	note.config = config
 
 	// Set encryption if used
@@ -87,18 +90,18 @@ func NoteObject(notesDir, relNote string, new bool) (*Note, error) {
 
 func (note *Note) CreateNote() error {
 
-	notePath := note.getNotePath()
+	noteDir := note.getNoteDir()
 
 	// Check that note doesn't already exist
-	if stat, err := os.Stat(notePath); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("failed stat note(%v): %v", notePath, err)
-	} else if err == nil && !stat.IsDir() {
-		return fmt.Errorf("file already exists at %v", notePath)
+	if stat, err := os.Stat(noteDir); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed stat note(%v): %v", noteDir, err)
+	} else if err == nil && stat.IsDir() {
+		return fmt.Errorf("dir already exists at %v", noteDir)
 	}
 
 	// Create path to file
-	if err := os.MkdirAll(filepath.Dir(notePath), 0755); err != nil {
-		return fmt.Errorf("failed to create subdirectories(%v): %v", filepath.Dir(notePath), err)
+	if err := os.MkdirAll(noteDir, 0755); err != nil {
+		return fmt.Errorf("failed to create subdirectories(%v): %v", noteDir, err)
 	}
 
 	// Load template
@@ -126,8 +129,8 @@ func (note *Note) CreateNote() error {
 		subject = ""
 	}
 	content := fmt.Sprintf(header, note.name, subject, authors, template)
-	if err := os.WriteFile(notePath, []byte(content), 0644); err != nil {
-		return fmt.Errorf("failed to create note(%v): %v", notePath, err)
+	if err := os.WriteFile(note.GetNotePath(), []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to create note(%v): %v", noteDir, err)
 	}
 	return nil
 }

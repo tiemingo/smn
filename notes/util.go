@@ -23,13 +23,21 @@ func (note *Note) getNoteDir() string {
 	return filepath.Join(note.getNotesDir(), note.getNoteRelDir())
 }
 
-func (note *Note) getNotePath() string {
+func (note *Note) getEncryptedNotePath() string {
+	return note.GetNotePath() + ".enc"
+}
+
+//
+// Public non-static
+//
+
+func (note *Note) GetNotePath() string {
 	return filepath.Join(note.getNoteDir(), "note.md")
 }
 
-func (note *Note) getEncryptedNotePath() string {
-	return note.getNotePath() + ".enc"
-}
+//
+// Private static
+//
 
 func nameToNote(name string) string {
 	return fmt.Sprintf("note@%v", name)
@@ -61,21 +69,25 @@ func splitRelNote(note string) (string, string, string, error) {
 	return name, topic, subjects, nil
 }
 
-func getExistingPathPart(path string) string {
-	current := filepath.Clean(path)
+func getExistingPathPart(base, rel string) string {
+	current := filepath.Join(base, rel)
 
 	for {
 		// Check if the current path exists
 		info, err := os.Stat(current)
 
 		if err == nil && info.IsDir() {
-			return current
+			existingRel, err := filepath.Rel(base, current)
+			if err != nil {
+				return ""
+			}
+			return existingRel
 		}
 
 		// Get the parent directory
 		parent := filepath.Dir(current)
 
-		if parent == current {
+		if parent == base {
 			break
 		}
 		current = parent

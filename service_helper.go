@@ -58,7 +58,7 @@ func openNoteAndSync(cfg config.Config, path string, create bool) error {
 	}
 
 	// Sync if wanted
-	basePath, err := actualNotesDir(cfg)
+	basePath, err := util.ReplaceWithHomeDir(cfg.NotesDir)
 	if err != nil {
 		return fmt.Errorf("failed to get notes directory: %v", err)
 	}
@@ -69,15 +69,6 @@ func openNoteAndSync(cfg config.Config, path string, create bool) error {
 	syncIfWanted(cfg, fmt.Sprintf("%v note %v", mode, notePath))
 
 	return nil
-}
-
-// actualNotesDir returns the notes dir with /notes added
-func actualNotesDir(cfg config.Config) (string, error) {
-	basePath, err := util.ReplaceWithHomeDir(cfg.NotesDir)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(basePath, "notes"), nil
 }
 
 // buildFileName returns the filename that should be used for exported notes with all replacer being replaced with actual values
@@ -93,12 +84,12 @@ func buildFileName(cfg config.Config, notePath string) (string, error) {
 	for _, author := range header.Authors {
 		replacedAuthor := util.ParseAuthor(author)
 		authorReplacer := strings.NewReplacer("{last_name}", replacedAuthor.LastName, "{first_name}", replacedAuthor.FirstName, "{given_name}", replacedAuthor.GivenName)
-		authors = append(authors, authorReplacer.Replace(cfg.BuildAuthor))
+		authors = append(authors, authorReplacer.Replace("build author"))
 	}
-	authorsString := strings.Join(authors, cfg.BuildAuthorSplit)
+	authorsString := strings.Join(authors, "cfg.BuildAuthorSplit")
 
 	titleReplacer := strings.NewReplacer("{authors}", authorsString, "{title}", header.Title, "{subject}", header.Subject)
-	return titleReplacer.Replace(cfg.BuildFileName), nil
+	return titleReplacer.Replace("cfg.BuildFileName"), nil
 }
 
 // getHeader returns the information from the markdown files yaml header
