@@ -82,15 +82,10 @@ func NoteObject(notesDir, relNote string, new bool) (*Note, error) {
 	}
 	note.aesGCM = aesGCM
 
-	// If note is new create it
-	if err := note.createNote(); err != nil {
-		return nil, fmt.Errorf("failed to create note: %v", err)
-	}
-
 	return note, nil
 }
 
-func (note *Note) createNote() error {
+func (note *Note) CreateNote() error {
 
 	notePath := note.getNotePath()
 
