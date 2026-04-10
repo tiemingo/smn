@@ -63,14 +63,18 @@ func editNote(path string) error {
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
-	notePath := filepath.Join(notesDir, path+".md")
+
+	note, err := notes.NoteObject(notesDir, path, true)
+	if err != nil {
+		return fmt.Errorf("failed to create note object: %v", err)
+	}
 
 	// Sync if wanted
 	if err := syncIfWanted(cfg); err != nil {
 		log.Printf("failed to sync, proceeding anyways, if you want to terminate the program upon sync error you can change this in the config: %v", err)
 	}
 
-	return openNoteAndSync(cfg, notePath, false)
+	return openNoteAndSync(cfg, note.GetNotePath(), false)
 }
 
 func removeNote(path string) error {
