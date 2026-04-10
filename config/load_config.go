@@ -8,19 +8,10 @@ import (
 )
 
 var defaultConfig = Config{
-	NotesDir:  "~/Documents/notes",
-	Template:  "", // No template
-	OutputDir: "~/Downloads",
+	NotesDir: "~/Documents/notes",
 
 	AutoSync:        true,
 	FailOnSyncError: false,
-
-	DefaultAuthors: []string{"Tiemingo"},
-
-	BuildCommand:     []string{"pandoc", "{note_path}", "~/Documents/notes/build/style.yaml", "-d", "~/Documents/notes/build/proposals.yaml", "-o", "{output_path}.pdf"},
-	BuildFileName:    "{authors}_{title}",
-	BuildAuthorSplit: "_and_",
-	BuildAuthor:      "{last_name}_{fist_name}",
 }
 
 // GetDefaultConfig returns the default config.
