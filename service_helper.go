@@ -23,19 +23,33 @@ func syncIfWanted(cfg config.Config, optionalCommitMessage ...string) error {
 		return nil
 	}
 
-	err := syncNotes(optionalCommitMessage...)
-
-	// Check if should exit
-	if cfg.FailOnSyncError {
-		log.Fatalf("failed to sync, if you don't want the program to exit on failed sync, you can change it in the config: %v", err)
+	// Get notes directory
+	notesDir, err := util.ReplaceWithHomeDir(cfg.NotesDir)
+	if err != nil {
+		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
 
-	return err
+	// Loop through all topics to sync them
+	repos, err := util.CollectGitRepos(notesDir)
+	if err != nil {
+		return fmt.Errorf("failed to collect git repos: %v", err)
+	}
+	for _, repo := range repos {
+		if err := syncNotes(repo, optionalCommitMessage...); err != nil {
+
+			// Check if should exit
+			if cfg.FailOnSyncError {
+				log.Fatalf("failed to sync, if you don't want the program to exit on failed sync, you can change it in the config: %v", err)
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 // openNoteAndSync opens the provided path with the default editor set in the env.
 // The create bool decides whether the sync commit message should be create or update.
-func openNoteAndSync(cfg config.Config, path string, create bool) error {
+func openNoteAndSync(cfg config.Config, note *notes.Note, create bool) error {
 
 	// Get editor
 	editor := os.Getenv("EDITOR")
@@ -43,7 +57,7 @@ func openNoteAndSync(cfg config.Config, path string, create bool) error {
 		editor = "vim"
 	}
 
-	cmd := exec.Command(editor, path)
+	cmd := exec.Command(editor, note.GetNotePath())
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -59,15 +73,7 @@ func openNoteAndSync(cfg config.Config, path string, create bool) error {
 	}
 
 	// Sync if wanted
-	basePath, err := util.ReplaceWithHomeDir(cfg.NotesDir)
-	if err != nil {
-		return fmt.Errorf("failed to get notes directory: %v", err)
-	}
-	notePath, err := filepath.Rel(basePath, path)
-	if err != nil {
-		return fmt.Errorf("failed to convert to relative path: %v", err)
-	}
-	syncIfWanted(cfg, fmt.Sprintf("%v note %v", mode, notePath))
+	syncIfWanted(cfg, fmt.Sprintf("%v note %v", mode, note.GetNoteRelName()))
 
 	return nil
 }

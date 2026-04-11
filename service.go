@@ -25,7 +25,7 @@ func createNote(path string) error {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
 
-	note, err := notes.NoteObject(notesDir, path, true)
+	note, err := notes.NoteObject(notesDir, path, true, cfg.EncryptionKey)
 	if err != nil {
 		return fmt.Errorf("failed to create note object: %v", err)
 	}
@@ -40,7 +40,7 @@ func createNote(path string) error {
 	}
 
 	// Open note and sync after
-	return openNoteAndSync(cfg, note.GetNotePath(), true)
+	return openNoteAndSync(cfg, note, true)
 }
 
 func editNote(path string) error {
@@ -56,7 +56,7 @@ func editNote(path string) error {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
 
-	note, err := notes.NoteObject(notesDir, path, false)
+	note, err := notes.NoteObject(notesDir, path, false, cfg.EncryptionKey)
 	if err != nil {
 		return fmt.Errorf("failed to create note object: %v", err)
 	}
@@ -66,7 +66,7 @@ func editNote(path string) error {
 		log.Printf("failed to sync, proceeding anyways, if you want to terminate the program upon sync error you can change this in the config: %v", err)
 	}
 
-	return openNoteAndSync(cfg, note.GetNotePath(), false)
+	return openNoteAndSync(cfg, note, false)
 }
 
 func removeNote(path string) error {
@@ -83,7 +83,7 @@ func removeNote(path string) error {
 	}
 
 	// Remove note
-	note, err := notes.NoteObject(notesDir, path, false)
+	note, err := notes.NoteObject(notesDir, path, false, cfg.EncryptionKey)
 	if err != nil {
 		return fmt.Errorf("failed to create note object: %v", err)
 	}
@@ -116,7 +116,7 @@ func buildNote(path string, buildMode string) error {
 		log.Printf("failed to sync, proceeding anyways, if you want to terminate the program upon sync error you can change this in the config: %v", err)
 	}
 
-	note, err := notes.NoteObject(notesDir, path, false)
+	note, err := notes.NoteObject(notesDir, path, false, cfg.EncryptionKey)
 	if err != nil {
 		return fmt.Errorf("failed to create note object: %v", err)
 	}
@@ -164,7 +164,7 @@ func latestNotes(amount int) error {
 	return nil
 }
 
-func syncNotes(optionalCommitMessage ...string) error {
+func syncNotes(gitDir string, optionalCommitMessage ...string) error {
 
 	// Check for optional commit message
 	commitMessage := "update notes"
@@ -172,14 +172,8 @@ func syncNotes(optionalCommitMessage ...string) error {
 		commitMessage = optionalCommitMessage[0]
 	}
 
-	// Change wd to notes directory
-	notesDir, err := util.ReplaceWithHomeDir(config.GetConfig().NotesDir)
-	if err != nil {
-		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
-	}
-
-	if err := os.Chdir(notesDir); err != nil {
-		return fmt.Errorf("failed cd to notes dir(%v): %v", notesDir, err)
+	if err := os.Chdir(gitDir); err != nil {
+		return fmt.Errorf("failed cd to notes dir(%v): %v", gitDir, err)
 	}
 
 	// Check for changes

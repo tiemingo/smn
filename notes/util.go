@@ -39,6 +39,14 @@ func (note *Note) GetNotePath() string {
 	return filepath.Join(note.getNoteDir(), "note.md")
 }
 
+func (note *Note) GetNoteRelName() string {
+	return filepath.Join(note.getNoteRelDirParent(), note.name)
+}
+
+func (note *Note) GetTopicDir() string {
+	return filepath.Join(note.getNotesDir(), note.topic)
+}
+
 //
 // Private static
 //

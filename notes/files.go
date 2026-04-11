@@ -19,7 +19,7 @@ type Note struct {
 	config note_config.Config
 }
 
-func NoteObject(notesDir, relNote string, new bool) (*Note, error) {
+func NoteObject(notesDir, relNote string, new bool, encryptionKey string) (*Note, error) {
 
 	name, topic, subjects, err := splitRelNote(relNote)
 	if err != nil {
@@ -53,11 +53,11 @@ func NoteObject(notesDir, relNote string, new bool) (*Note, error) {
 	// Set encryption if used
 	var aesGCM cipher.AEAD
 	if note.config.UseEncryption {
-		if note.config.EncryptionKey == "" {
+		if encryptionKey == "" {
 			return nil, fmt.Errorf("when using encryption please provide an encryption key")
 		}
 
-		block, err := aes.NewCipher([]byte(note.config.EncryptionKey))
+		block, err := aes.NewCipher([]byte(encryptionKey))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cipher block: %v", err)
 		}

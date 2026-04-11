@@ -8,6 +8,7 @@ import (
 	"github.com/akamensky/argparse"
 	"github.com/tiemingo/smn/config"
 	"github.com/tiemingo/smn/note_config"
+	"github.com/tiemingo/smn/util"
 )
 
 func main() {
@@ -37,7 +38,22 @@ func main() {
 	} else if latestCmd.Happened() {
 		err = latestNotes(*latestAmount)
 	} else if syncCmd.Happened() {
-		err = syncNotes()
+		notesDir, err := util.ReplaceWithHomeDir(config.GetConfig().NotesDir)
+		if err != nil {
+			err = fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
+		} else {
+			repos, err := util.CollectGitRepos(notesDir)
+			if err != nil {
+				err = fmt.Errorf("failed to collect git repos: %v", err)
+			} else {
+				for _, repo := range repos {
+					if syncErr := syncNotes(repo); syncErr != nil {
+						err = syncErr
+						break
+					}
+				}
+			}
+		}
 	} else if configCmd.Happened() {
 		fmt.Printf("config.json in config directory:\n\n%v\n\n\nconfig.yaml in notes directories:\n\n%v\n", config.GetDefaultConfig(), note_config.GetDefaultConfig())
 

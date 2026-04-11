@@ -3,8 +3,10 @@ package util
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -66,4 +68,23 @@ func ParseAuthor(fullName string) Author {
 		LastName:  lastName,
 		GivenName: givenNames,
 	}
+}
+
+func CollectGitRepos(baseDir string) ([]string, error) {
+
+	paths := []string{}
+
+	err := filepath.WalkDir(baseDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() && d.Name() == ".git" {
+			paths = append(paths, filepath.Dir(path))
+
+			return filepath.SkipDir
+		}
+		return nil
+	})
+	return paths, err
 }
