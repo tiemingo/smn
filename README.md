@@ -165,7 +165,7 @@ In this section i want to show you some commands you can use for a better workfl
 **Selecting note to edit:** <br>
 This command used `dmenu` to list the last 10 notes and opens the selected note to be edited.
 ```bash
-smn edit "$(smn latest | dmenu)"
+smn edit "$(smn latest 10 | dmenu)"
 ```
 **Selecting note to build and open it right after:** <br>
 This command uses `dmenu` to display all your notes, when you select one it gets exported and opened on your default application using `xdg-open`.
