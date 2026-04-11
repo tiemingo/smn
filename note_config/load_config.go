@@ -54,7 +54,7 @@ func GetConfig(baseDir, relDir string) (Config, error) {
 
 	// Create list of paths that could have a config file
 	configPaths := []string{}
-	relPaths := strings.Split(strings.Trim(relDir, "/"), "/")
+	relPaths := strings.Split(strings.Trim(filepath.ToSlash(relDir), "/"), "/")
 	for i := range relPaths {
 		fullPath := slices.Concat([]string{baseDir}, relPaths[:i+1], []string{"config.yaml"})
 		configPaths = append(configPaths, filepath.Join(fullPath...))
