@@ -4,13 +4,14 @@ type Config struct {
 
 	// Encryption
 	EncryptionKey string `yaml:"encryption_key"`
-	UseEncryption bool   `yaml:"use_encryption"`
+	UseEncryption bool   `yaml:"use_encryption"` // Encrypts files, add note.md to gitignore
 
 	// Defaults
 
-	Template  string   `yaml:"template,omitempty"` // Path to template
-	Authors   []string `yaml:"authors,omitempty"`  // List of default authors
-	BuildMode string   `yaml:"build_mode"`         // Default build mode
+	Template     string   `yaml:"template,omitempty"` // Path to template
+	Authors      []string `yaml:"authors,omitempty"`  // List of default authors
+	BuildMode    string   `yaml:"build_mode"`         // Default build mode
+	GitIgnoreOut bool     `yaml:"gitignore_out"`      // Should add .out folder to notes dir when creating new note
 
 	// Build
 

@@ -15,8 +15,12 @@ func (note *Note) getNoteRelDirParent() string {
 	return filepath.Join(note.topic, note.subjects)
 }
 
+func (note *Note) getNoteDirParent() string {
+	return filepath.Join(note.getNoteDir(), note.getNoteRelDirParent())
+}
+
 func (note *Note) getNoteRelDir() string {
-	return filepath.Join(note.getNoteRelDirParent(), nameToNote(note.name))
+	return filepath.Join(note.getNoteRelDirParent(), NameToNote(note.name))
 }
 
 func (note *Note) getNoteDir() string {
@@ -38,18 +42,6 @@ func (note *Note) GetNotePath() string {
 //
 // Private static
 //
-
-func nameToNote(name string) string {
-	return fmt.Sprintf("note@%v", name)
-}
-
-func noteToName(note string) string {
-	return strings.TrimPrefix("note@", note)
-}
-
-func isNote(note string) bool {
-	return strings.HasPrefix("note@", note)
-}
 
 func splitRelNote(note string) (string, string, string, error) {
 
@@ -94,4 +86,20 @@ func getExistingPathPart(base, rel string) string {
 	}
 
 	return ""
+}
+
+//
+// Public static
+//
+
+func NameToNote(name string) string {
+	return fmt.Sprintf("note@%v", name)
+}
+
+func NoteToName(note string) string {
+	return strings.TrimPrefix(note, "note@")
+}
+
+func IsNote(note string) bool {
+	return strings.HasPrefix(strings.TrimSpace(note), "note@")
 }

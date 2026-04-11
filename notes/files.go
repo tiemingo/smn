@@ -8,16 +8,6 @@ import (
 	"github.com/tiemingo/smn/note_config"
 )
 
-// Header used for new notes
-const header = `---
-title: "%v"
-subtitle: "%v"
-author: [%v]
-date: "\\today"
----
-
-%v`
-
 type Note struct {
 	notesDir string // Path to notes dir with replaced relatives
 	topic    string // Name of the note topic. This is a direct child od the notes dir.

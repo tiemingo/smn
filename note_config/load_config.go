@@ -3,6 +3,7 @@ package note_config
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"slices"
@@ -10,6 +11,44 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
+
+var defaultConfig = Config{
+	EncryptionKey: "your encryption key for aes-256",
+	UseEncryption: true,
+
+	Template:     "~/Documents/notes-template.tmpl",
+	Authors:      []string{"Tiemingo"},
+	BuildMode:    "r",
+	GitIgnoreOut: true,
+
+	BuildCommand: []string{
+		"pandoc",
+		"{note_path}",
+		"{build_file_1}",
+		"-d",
+		"{build_file_2}",
+		"-o",
+		"{output_path}.pdf",
+	},
+	BuildFiles: []string{
+		"style.yaml",
+		"proposals.yaml",
+	},
+	BuildFileName:    "{authors}_{title}",
+	BuildAuthor:      "{last_name}_{first_name}",
+	BuildAuthorSplit: "_and_",
+
+	AutoBuild: true,
+}
+
+// GetDefaultConfig returns the default config.
+func GetDefaultConfig() string {
+	byteConfig, err := yaml.Marshal(defaultConfig)
+	if err != nil {
+		log.Printf("WARN: Failed to marshal default config: %v\n", err)
+	}
+	return string(byteConfig)
+}
 
 func GetConfig(baseDir, relDir string) (Config, error) {
 

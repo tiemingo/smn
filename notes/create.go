@@ -10,6 +10,16 @@ import (
 	"github.com/tiemingo/smn/util"
 )
 
+// Header used for new notes
+const noteHeader = `---
+title: "%v"
+subtitle: "%v"
+author: [%v]
+date: "\\today"
+---
+
+%v`
+
 func (note *Note) CreateNote() error {
 
 	noteDir := note.getNoteDir()
@@ -50,9 +60,10 @@ func (note *Note) CreateNote() error {
 	if subject == "." {
 		subject = ""
 	}
-	content := fmt.Sprintf(header, note.name, subject, authors, template)
+	content := fmt.Sprintf(noteHeader, note.name, subject, authors, template)
 	if err := os.WriteFile(note.GetNotePath(), []byte(content), 0644); err != nil {
 		return fmt.Errorf("failed to create note(%v): %v", noteDir, err)
 	}
+
 	return nil
 }
