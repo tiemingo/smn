@@ -2,15 +2,16 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
+	"sort"
 
 	"github.com/tiemingo/smn/config"
+	"github.com/tiemingo/smn/notes"
 	"github.com/tiemingo/smn/util"
-	"gopkg.in/yaml.v3"
 )
 
 // syncIfWanted syncs the notes if the config option is set to auto sync.
@@ -22,19 +23,33 @@ func syncIfWanted(cfg config.Config, optionalCommitMessage ...string) error {
 		return nil
 	}
 
-	err := syncNotes(optionalCommitMessage...)
-
-	// Check if should exit
-	if cfg.FailOnSyncError {
-		log.Fatalf("failed to sync, if you don't want the program to exit on failed sync, you can change it in the config: %v", err)
+	// Get notes directory
+	notesDir, err := util.ReplaceWithHomeDir(cfg.NotesDir)
+	if err != nil {
+		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
 
-	return err
+	// Loop through all topics to sync them
+	repos, err := util.CollectGitRepos(notesDir)
+	if err != nil {
+		return fmt.Errorf("failed to collect git repos: %v", err)
+	}
+	for _, repo := range repos {
+		if err := syncNotes(repo, optionalCommitMessage...); err != nil {
+
+			// Check if should exit
+			if cfg.FailOnSyncError {
+				log.Fatalf("failed to sync, if you don't want the program to exit on failed sync, you can change it in the config: %v", err)
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 // openNoteAndSync opens the provided path with the default editor set in the env.
 // The create bool decides whether the sync commit message should be create or update.
-func openNoteAndSync(cfg config.Config, path string, create bool) error {
+func openNoteAndSync(cfg config.Config, note *notes.Note, create bool) error {
 
 	// Get editor
 	editor := os.Getenv("EDITOR")
@@ -42,14 +57,26 @@ func openNoteAndSync(cfg config.Config, path string, create bool) error {
 		editor = "vim"
 	}
 
-	cmd := exec.Command(editor, path)
+	cmd := exec.Command(editor, note.GetNotePath())
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		syncIfWanted(cfg)
+		syncErr := syncIfWanted(cfg)
+		if syncErr != nil {
+			return fmt.Errorf("failed to open file in editor(%v) and sync after: %v; %v", editor, err, syncErr)
+		}
 		return fmt.Errorf("failed to open file in editor(%v): %v", editor, err)
+	}
+
+	if note.GetConfig().AutoBuild {
+		if _, err := note.BuildNote(""); err != nil {
+			if syncErr := syncIfWanted(cfg); syncErr != nil {
+				return fmt.Errorf("failed to build note and sync after: %v; %v", err, syncErr)
+			}
+			return fmt.Errorf("failed to build note: %v", err)
+		}
 	}
 
 	mode := "update"
@@ -58,69 +85,57 @@ func openNoteAndSync(cfg config.Config, path string, create bool) error {
 	}
 
 	// Sync if wanted
-	basePath, err := actualNotesDir(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to get notes directory: %v", err)
-	}
-	notePath, err := filepath.Rel(basePath, path)
-	if err != nil {
-		return fmt.Errorf("failed to convert to relative path: %v", err)
-	}
-	syncIfWanted(cfg, fmt.Sprintf("%v note %v", mode, notePath))
-
-	return nil
+	return syncIfWanted(cfg, fmt.Sprintf("%v note %v", mode, note.GetNoteRelName()))
 }
 
-// actualNotesDir returns the notes dir with /notes added
-func actualNotesDir(cfg config.Config) (string, error) {
-	basePath, err := util.ReplaceWithHomeDir(cfg.NotesDir)
+// GetSortedMarkdownFiles returns all notes names with topic and subjects in the provided and it's sub directories.
+// The notes returned are ordered by last modified, with the most recent first.
+func GetSortedMarkdownFiles(root string) ([]string, error) {
+
+	type FileInfo struct {
+		Path    string
+		ModTime int64
+	}
+	var files []FileInfo
+
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Only process directories that have note@ prefix
+		if d.IsDir() && notes.IsNote(filepath.Base(path)) {
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+			notePath, err := filepath.Rel(root, path)
+			if err != nil {
+				return fmt.Errorf("failed to convert to relative path: %v", err)
+			}
+			notePath = filepath.Join(filepath.Dir(notePath), notes.NoteToName(filepath.Base(notePath)))
+			files = append(files, FileInfo{
+				Path:    notePath,
+				ModTime: info.ModTime().Unix(),
+			})
+		}
+		return nil
+	})
+
 	if err != nil {
-		return "", err
-	}
-	return filepath.Join(basePath, "notes"), nil
-}
-
-// buildFileName returns the filename that should be used for exported notes with all replacer being replaced with actual values
-func buildFileName(cfg config.Config, notePath string) (string, error) {
-
-	header, err := getHeader(notePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to get header: %v", err)
+		return nil, err
 	}
 
-	// Parse authors
-	authors := []string{}
-	for _, author := range header.Authors {
-		replacedAuthor := util.ParseAuthor(author)
-		authorReplacer := strings.NewReplacer("{last_name}", replacedAuthor.LastName, "{first_name}", replacedAuthor.FirstName, "{given_name}", replacedAuthor.GivenName)
-		authors = append(authors, authorReplacer.Replace(cfg.BuildAuthor))
-	}
-	authorsString := strings.Join(authors, cfg.BuildAuthorSplit)
+	// Sort by by last modification
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].ModTime > files[j].ModTime
+	})
 
-	titleReplacer := strings.NewReplacer("{authors}", authorsString, "{title}", header.Title, "{subject}", header.Subject)
-	return titleReplacer.Replace(cfg.BuildFileName), nil
-}
-
-// getHeader returns the information from the markdown files yaml header
-func getHeader(path string) (Header, error) {
-
-	// Load note and extract header
-	noteBytes, err := os.ReadFile(path)
-	if err != nil {
-		return Header{}, fmt.Errorf("failed to load note: %v", err)
-	}
-	parts := strings.SplitN(string(noteBytes), "---", 3)
-	if len(parts) < 3 {
-		return Header{}, fmt.Errorf("failed to find header: %v", err)
-	}
-	yamlBlock := parts[1]
-
-	// Unmarshal
-	var header Header
-	err = yaml.Unmarshal([]byte(yamlBlock), &header)
-	if err != nil {
-		return Header{}, fmt.Errorf("failed to unmarshal header: %v", err)
+	// Extract just the paths into a string slice
+	result := make([]string, len(files))
+	for i, f := range files {
+		result[i] = f.Path
 	}
 
-	return header, nil
+	return result, nil
 }

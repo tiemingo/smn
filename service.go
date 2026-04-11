@@ -1,33 +1,15 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/tiemingo/smn/config"
+	"github.com/tiemingo/smn/notes"
 	"github.com/tiemingo/smn/util"
 )
-
-type Header struct {
-	Title   string   `yaml:"title"`
-	Authors []string `yaml:"author"`
-	Subject string   `yaml:"subtitle"`
-}
-
-// Header used for new notes
-const header = `---
-title: "%v"
-subtitle: "%v"
-author: [%v]
-date: "\\today"
----
-
-%v`
 
 func createNote(path string) error {
 
@@ -38,60 +20,27 @@ func createNote(path string) error {
 	cfg := config.GetConfig()
 
 	// Get notes directory
-	notesDir, err := actualNotesDir(cfg)
+	notesDir, err := util.ReplaceWithHomeDir(cfg.NotesDir)
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
-	notePath := filepath.Join(notesDir, path+".md")
+
+	note, err := notes.NoteObject(notesDir, path, true, cfg.EncryptionKey)
+	if err != nil {
+		return fmt.Errorf("failed to create note object: %v", err)
+	}
 
 	// Sync if wanted
 	if err := syncIfWanted(cfg); err != nil {
 		log.Printf("failed to sync, proceeding anyways, if you want to terminate the program upon sync error you can change this in the config: %v", err)
 	}
 
-	// Check that note doesn't already exist
-	if stat, err := os.Stat(notePath); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("failed stat note(%v): %v", notePath, err)
-	} else if err == nil && !stat.IsDir() {
-		return fmt.Errorf("file already exists at %v", notePath)
-	}
-
-	// Create path to file
-	if err := os.MkdirAll(filepath.Dir(notePath), 0755); err != nil {
-		return fmt.Errorf("failed to create subdirectories(%v): %v", filepath.Dir(notePath), err)
-	}
-
-	// Load template
-	template := ""
-	if cfg.Template != "" {
-		templatePath, err := util.ReplaceWithHomeDir(cfg.Template)
-		if err != nil {
-			return fmt.Errorf("failed convert template path(%v): %v", cfg.Template, err)
-		}
-		templateBytes, err := os.ReadFile(templatePath)
-		if err != nil {
-			return fmt.Errorf("failed to load template(%v): %v", cfg.Template, err)
-		}
-		template = string(templateBytes)
-	}
-
-	// Create note
-	defaultAuthors := []string{}
-	for _, author := range cfg.DefaultAuthors {
-		defaultAuthors = append(defaultAuthors, fmt.Sprintf("\"%v\"", author))
-	}
-	authors := strings.Join(defaultAuthors, ", ")
-	subject := filepath.Base(filepath.Dir(path))
-	if subject == "." {
-		subject = ""
-	}
-	content := fmt.Sprintf(header, filepath.Base(path), subject, authors, template)
-	if err := os.WriteFile(notePath, []byte(content), 0644); err != nil {
-		return fmt.Errorf("failed to create note(%v): %v", notePath, err)
+	if err := note.CreateNote(); err != nil {
+		return fmt.Errorf("failed to create note: %v", err)
 	}
 
 	// Open note and sync after
-	return openNoteAndSync(cfg, notePath, true)
+	return openNoteAndSync(cfg, note, true)
 }
 
 func editNote(path string) error {
@@ -102,18 +51,27 @@ func editNote(path string) error {
 	cfg := config.GetConfig()
 
 	// Get notes directory
-	notesDir, err := actualNotesDir(cfg)
+	notesDir, err := util.ReplaceWithHomeDir(cfg.NotesDir)
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
-	notePath := filepath.Join(notesDir, path+".md")
+
+	note, err := notes.NoteObject(notesDir, path, false, cfg.EncryptionKey)
+	if err != nil {
+		return fmt.Errorf("failed to create note object: %v", err)
+	}
 
 	// Sync if wanted
 	if err := syncIfWanted(cfg); err != nil {
 		log.Printf("failed to sync, proceeding anyways, if you want to terminate the program upon sync error you can change this in the config: %v", err)
 	}
 
-	return openNoteAndSync(cfg, notePath, false)
+	// Check that note exists
+	if !note.IsExist() {
+		return fmt.Errorf("note does not exist")
+	}
+
+	return openNoteAndSync(cfg, note, false)
 }
 
 func removeNote(path string) error {
@@ -124,20 +82,18 @@ func removeNote(path string) error {
 	cfg := config.GetConfig()
 
 	// Get notes directory
-	notesDir, err := actualNotesDir(cfg)
+	notesDir, err := util.ReplaceWithHomeDir(cfg.NotesDir)
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
-	notePath := filepath.Join(notesDir, path+".md")
-
-	// Sync if wanted
-	if err := syncIfWanted(cfg); err != nil {
-		log.Printf("failed to sync, proceeding anyways, if you want to terminate the program upon sync error you can change this in the config: %v", err)
-	}
 
 	// Remove note
-	if err := os.Remove(notePath); err != nil {
-		return fmt.Errorf("failed to delete note: %v", err)
+	note, err := notes.NoteObject(notesDir, path, false, cfg.EncryptionKey)
+	if err != nil {
+		return fmt.Errorf("failed to create note object: %v", err)
+	}
+	if err := note.Remove(); err != nil {
+		return err
 	}
 
 	// Sync if wanted
@@ -147,7 +103,7 @@ func removeNote(path string) error {
 	return nil
 }
 
-func buildNote(path string) error {
+func buildNote(path string, buildMode string) error {
 	if path == "" {
 		return fmt.Errorf("you have to provide a note title")
 	}
@@ -155,35 +111,31 @@ func buildNote(path string) error {
 	cfg := config.GetConfig()
 
 	// Get notes directory
-	notesDir, err := actualNotesDir(cfg)
+	notesDir, err := util.ReplaceWithHomeDir(cfg.NotesDir)
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
-	notePath := filepath.Join(notesDir, path+".md")
 
 	// Sync if wanted
 	if err := syncIfWanted(cfg); err != nil {
 		log.Printf("failed to sync, proceeding anyways, if you want to terminate the program upon sync error you can change this in the config: %v", err)
 	}
 
-	fileName, err := buildFileName(cfg, notePath)
+	note, err := notes.NoteObject(notesDir, path, false, cfg.EncryptionKey)
 	if err != nil {
-		return fmt.Errorf("failed to create file name: %v", err)
+		return fmt.Errorf("failed to create note object: %v", err)
 	}
 
-	// Run build command
-	replaceCommand := strings.NewReplacer("{note_path}", notePath, "{output_path}", filepath.Join(cfg.OutputDir, fileName))
-	buildCommand := cfg.BuildCommand
-	for i, commandElement := range buildCommand {
-		replacedString, err := util.ReplaceWithHomeDir(replaceCommand.Replace(commandElement))
-		if err != nil {
-			return fmt.Errorf("failed to replace home directory: %v", err)
-		}
-		buildCommand = slices.Replace(buildCommand, i, i+1, replacedString)
+	outputFilePath, err := note.BuildNote(buildMode)
+	if err != nil {
+		return fmt.Errorf("failed to build note: %v", err)
 	}
 
-	if _, err, stderr := util.RunCommand(buildCommand[0], buildCommand[1:]...); err != nil {
-		return fmt.Errorf("failed to run %v: %v, stderr: %v", cfg.BuildCommand, err, stderr)
+	fmt.Println(outputFilePath)
+
+	// Sync if wanted
+	if err := syncIfWanted(cfg); err != nil {
+		log.Printf("failed to sync, proceeding anyways, if you want to terminate the program upon sync error you can change this in the config: %v", err)
 	}
 
 	return nil
@@ -193,7 +145,7 @@ func latestNotes(amount int) error {
 	cfg := config.GetConfig()
 
 	// Get notes directory
-	notesDir, err := actualNotesDir(cfg)
+	notesDir, err := util.ReplaceWithHomeDir(cfg.NotesDir)
 	if err != nil {
 		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
 	}
@@ -203,7 +155,7 @@ func latestNotes(amount int) error {
 		log.Printf("failed to sync, proceeding anyways, if you want to terminate the program upon sync error you can change this in the config: %v", err)
 	}
 
-	notes, err := util.GetSortedMarkdownFiles(notesDir)
+	notes, err := GetSortedMarkdownFiles(notesDir)
 	if err != nil {
 		return fmt.Errorf("failed to get notes: %v", err)
 	}
@@ -217,7 +169,7 @@ func latestNotes(amount int) error {
 	return nil
 }
 
-func syncNotes(optionalCommitMessage ...string) error {
+func syncNotes(gitDir string, optionalCommitMessage ...string) error {
 
 	// Check for optional commit message
 	commitMessage := "update notes"
@@ -225,14 +177,8 @@ func syncNotes(optionalCommitMessage ...string) error {
 		commitMessage = optionalCommitMessage[0]
 	}
 
-	// Change wd to notes directory
-	notesDir, err := util.ReplaceWithHomeDir(config.GetConfig().NotesDir)
-	if err != nil {
-		return fmt.Errorf("failed get notes dir(%v): %v", notesDir, err)
-	}
-
-	if err := os.Chdir(notesDir); err != nil {
-		return fmt.Errorf("failed cd to notes dir(%v): %v", notesDir, err)
+	if err := os.Chdir(gitDir); err != nil {
+		return fmt.Errorf("failed cd to notes dir(%v): %v", gitDir, err)
 	}
 
 	// Check for changes

@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 )
 
@@ -71,55 +70,21 @@ func ParseAuthor(fullName string) Author {
 	}
 }
 
-// GetSortedMarkdownFiles returns all markdown files in the provided and it's sub directories.
-// The returned string is the relative path of the file starting at the root dir.
-// The files returned ordered by last modified, with the most recent first.
-func GetSortedMarkdownFiles(root string) ([]string, error) {
+func CollectGitRepos(baseDir string) ([]string, error) {
 
-	type FileInfo struct {
-		Path    string
-		ModTime int64
-	}
-	var files []FileInfo
+	paths := []string{}
 
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(baseDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		// Only process files ending in .md
-		if !d.IsDir() && strings.ToLower(filepath.Ext(path)) == ".md" {
-			info, err := d.Info()
-			if err != nil {
-				return err
-			}
-			notePath, err := filepath.Rel(root, path)
-			if err != nil {
-				return fmt.Errorf("failed to convert to relative path: %v", err)
-			}
-			notePath = strings.TrimRight(notePath, ".md")
-			files = append(files, FileInfo{
-				Path:    notePath,
-				ModTime: info.ModTime().Unix(),
-			})
+		if d.IsDir() && d.Name() == ".git" {
+			paths = append(paths, filepath.Dir(path))
+
+			return filepath.SkipDir
 		}
 		return nil
 	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	// Sort by by last modification
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].ModTime > files[j].ModTime
-	})
-
-	// Extract just the paths into a string slice
-	result := make([]string, len(files))
-	for i, f := range files {
-		result[i] = f.Path
-	}
-
-	return result, nil
+	return paths, err
 }
