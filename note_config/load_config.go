@@ -33,9 +33,10 @@ var defaultConfig = Config{
 		"style.yaml",
 		"proposals.yaml",
 	},
-	BuildFileName:    "{authors}_{title}",
-	BuildAuthor:      "{last_name}_{first_name}",
-	BuildAuthorSplit: "_and_",
+	BuildFileName:     "{authors} {title}",
+	BuildAuthor:       "{last_name} {first_name}",
+	BuildAuthorSplit:  " and ",
+	BuildReplaceSpace: "_",
 
 	AutoBuild: true,
 }

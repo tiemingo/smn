@@ -66,6 +66,11 @@ func editNote(path string) error {
 		log.Printf("failed to sync, proceeding anyways, if you want to terminate the program upon sync error you can change this in the config: %v", err)
 	}
 
+	// Check that note exists
+	if !note.IsExist() {
+		return fmt.Errorf("note does not exist")
+	}
+
 	return openNoteAndSync(cfg, note, false)
 }
 

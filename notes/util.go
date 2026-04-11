@@ -47,6 +47,11 @@ func (note *Note) GetTopicDir() string {
 	return filepath.Join(note.getNotesDir(), note.topic)
 }
 
+func (note *Note) IsExist() bool {
+	stat, err := os.Stat(note.GetNotePath())
+	return err == nil && !stat.IsDir()
+}
+
 //
 // Private static
 //

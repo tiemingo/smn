@@ -80,7 +80,13 @@ func (note *Note) getBuildFileName(notePath string) (string, error) {
 	authorsString := strings.Join(authors, note.config.BuildAuthorSplit)
 
 	titleReplacer := strings.NewReplacer("{authors}", authorsString, "{title}", noteHeader.Title, "{subject}", noteHeader.Subject)
-	return titleReplacer.Replace(note.config.BuildFileName), nil
+	replacedTitle := titleReplacer.Replace(note.config.BuildFileName)
+
+	// Replace spaces and trim
+	replacedTitle = strings.TrimSpace(replacedTitle)
+	replacedTitle = strings.ReplaceAll(replacedTitle, " ", note.config.BuildReplaceSpace)
+
+	return replacedTitle, nil
 }
 
 // getHeader returns the information from the markdown files yaml header
