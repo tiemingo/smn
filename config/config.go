@@ -2,6 +2,10 @@ package config
 
 type Config struct {
 
+	// Encryption
+
+	EncryptionKey string `json:"encryption_key"`
+
 	// Paths
 
 	NotesDir string `json:"notes_dir"` // Directory that contains the notes. If sync is used this directory should not contain the .git folder, it should be the parent of the directories with .git folder. But multiple git folde can be used

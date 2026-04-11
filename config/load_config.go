@@ -8,6 +8,8 @@ import (
 )
 
 var defaultConfig = Config{
+	EncryptionKey: "",
+
 	NotesDir: "~/Documents/notes",
 
 	AutoSync:        true,

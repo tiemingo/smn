@@ -13,7 +13,6 @@ import (
 )
 
 var defaultConfig = Config{
-	EncryptionKey: "your encryption key for aes-256",
 	UseEncryption: true,
 
 	Template:     "~/Documents/notes-template.tmpl",
