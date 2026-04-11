@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/tiemingo/smn/note_config"
 )
 
 func (note *Note) getNotesDir() string {
@@ -50,6 +52,10 @@ func (note *Note) GetTopicDir() string {
 func (note *Note) IsExist() bool {
 	stat, err := os.Stat(note.GetNotePath())
 	return err == nil && !stat.IsDir()
+}
+
+func (note *Note) GetConfig() note_config.Config {
+	return note.config
 }
 
 //

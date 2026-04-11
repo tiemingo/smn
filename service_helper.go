@@ -63,8 +63,20 @@ func openNoteAndSync(cfg config.Config, note *notes.Note, create bool) error {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		syncIfWanted(cfg)
+		syncErr := syncIfWanted(cfg)
+		if syncErr != nil {
+			return fmt.Errorf("failed to open file in editor(%v) and sync after: %v; %v", editor, err, syncErr)
+		}
 		return fmt.Errorf("failed to open file in editor(%v): %v", editor, err)
+	}
+
+	if note.GetConfig().AutoBuild {
+		if _, err := note.BuildNote(""); err != nil {
+			if syncErr := syncIfWanted(cfg); syncErr != nil {
+				return fmt.Errorf("failed to build note and sync after: %v; %v", err, syncErr)
+			}
+			return fmt.Errorf("failed to build note: %v", err)
+		}
 	}
 
 	mode := "update"
@@ -73,9 +85,7 @@ func openNoteAndSync(cfg config.Config, note *notes.Note, create bool) error {
 	}
 
 	// Sync if wanted
-	syncIfWanted(cfg, fmt.Sprintf("%v note %v", mode, note.GetNoteRelName()))
-
-	return nil
+	return syncIfWanted(cfg, fmt.Sprintf("%v note %v", mode, note.GetNoteRelName()))
 }
 
 // GetSortedMarkdownFiles returns all notes names with topic and subjects in the provided and it's sub directories.
