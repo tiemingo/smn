@@ -85,6 +85,7 @@ There are 3 build mode:
 ## Configuration
 **General configuration of smn:** <br>
 The editor that opens when a new note is created or an existing note is edited can be set using the `EDITOR` environment variable.<br>
+If you are using vscode you should use `code --wait` as your editor, even better would be to add the `--new-window` flag so you don't have to close the window you are currently working in.<br>
 For the configuration a `config.json` is used that can be set at `<users_config_dir>/smn/config.json`.<br>
 This is an example configuration file with all options.
 ```json

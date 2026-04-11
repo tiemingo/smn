@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/tiemingo/smn/config"
 	"github.com/tiemingo/smn/notes"
@@ -52,12 +53,15 @@ func syncIfWanted(cfg config.Config, optionalCommitMessage ...string) error {
 func openNoteAndSync(cfg config.Config, note *notes.Note, create bool) error {
 
 	// Get editor
-	editor := os.Getenv("EDITOR")
-	if editor == "" {
-		editor = "vim"
+	editorEnv := os.Getenv("EDITOR")
+	if editorEnv == "" {
+		editorEnv = "vim"
 	}
 
-	cmd := exec.Command(editor, note.GetNotePath())
+	editor := strings.Split(editorEnv, " ")
+	args := append(editor[1:], note.GetNotePath())
+
+	cmd := exec.Command(editor[0], args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
